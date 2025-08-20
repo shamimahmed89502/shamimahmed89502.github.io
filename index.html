@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Type Shooter</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:black;color:#fff;text-align:center;}
+h1{margin:10px 0;font-size:36px;color:white;}
+.container{display:flex;justify-content:center;align-items:flex-start;width:100%;}
+.ad{width:15%;min-width:100px;margin:5px;}
+#gameContainer{width:70%;min-width:300px;position:relative;}
+section{padding:10px;margin:5px auto;width:90%;max-width:800px;background:rgba(255,255,255,0.05);border-radius:10px;}
+.collapsible{cursor:pointer;user-select:none;padding:10px;background:#444;border:none;font-size:20px;width:100%;text-align:left;border-radius:5px;margin-bottom:5px;}
+.content{display:none;padding:5px;}
+#gameArea{position:relative;width:100%;height:500px;overflow:hidden;background:black;margin-top:10px;}
+#startBtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+.star{position:absolute;background:white;border-radius:50%;opacity:.15}
+.word{position:absolute;font-size:18px;font-weight:bold;color:#0f0;}
+.filled{color:#f00;}
+#score{font-size:24px;margin:10px;}
+#gameOver,#restartBtn,#resetScores{font-size:36px;color:red;display:none;}
+#restartBtn,#resetScores{color:#fff;background:#444;border:none;padding:15px 30px;font-size:28px;cursor:pointer;display:block;margin:5px auto;}
+#arrow{position:absolute;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:12px solid yellow;pointer-events:none;display:none;}
+@media(max-width:800px){
+  .container{flex-direction:column;}
+  .ad{display:none;}
+  #gameContainer{width:95%;}
+}
+</style>
+</head>
+<body>
+
+<h1>Type Shooter</h1>
+
+<div class="container">
+  <div class="ad">
+    <!-- LEFT ADSENSE CODE HERE -->
+  </div>
+  
+  <div id="gameContainer">
+    <div id="gameArea">
+      <div id="arrow"></div>
+      <button id="startBtn">Start Game</button>
+    </div>
+
+    <div id="score">Score: 0</div>
+    <div id="gameOver">Game Over!</div>
+    <button id="restartBtn">Restart Game</button>
+
+    <section>
+      <button class="collapsible">High Scores</button>
+      <div class="content">
+        <ol id="scoreList"></ol>
+        <button id="resetScores">Reset High Scores</button>
+      </div>
+    </section>
+
+    <section>
+      <button class="collapsible">About</button>
+      <div class="content">
+        <p>Type Shooter is a fun typing game to improve your speed and accuracy. Words fall from the top, and you need to type them correctly before they reach the bottom!</p>
+      </div>
+    </section>
+
+    <section>
+      <button class="collapsible">How to Play</button>
+      <div class="content">
+        <ul>
+          <li>Type the falling words correctly to shoot them.</li>
+          <li>Correct letters play a soft typing sound, wrong letters a soft beep.</li>
+          <li>The arrow points to the closest word.</li>
+          <li>Difficulty increases gradually as time passes.</li>
+          <li>Score as many points as possible!</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="ad">
+    <!-- RIGHT ADSENSE CODE HERE -->
+  </div>
+</div>
+
+<script>
+// COLLAPSIBLE
+const coll=document.getElementsByClassName("collapsible");
+for(let i=0;i<coll.length;i++){coll[i].addEventListener("click",function(){this.classList.toggle("active");const content=this.nextElementSibling;if(content.style.display==="block")content.style.display="none";else content.style.display="block";});}
+
+// AUDIO USING AudioContext
+let audioCtx;
+function playCorrect() {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.value = 600;
+  g.gain.value = 0.05;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime + 0.05);
+}
+function playWrong() {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'square';
+  o.frequency.value = 200;
+  g.gain.value = 0.05;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  o.stop(audioCtx.currentTime + 0.1);
+}
+
+// GAME VARIABLES
+const gameArea=document.getElementById('gameArea');
+const scoreDisplay=document.getElementById('score');
+const gameOverDisplay=document.getElementById('gameOver');
+const startBtn=document.getElementById('startBtn');
+const restartBtn=document.getElementById('restartBtn');
+const arrow=document.getElementById('arrow');
+const scoreList=document.getElementById('scoreList');
+const resetScoresBtn=document.getElementById('resetScores');
+
+const easyWords=["cat","dog","sun","tree","book","car","ball","home","cup","hat","man","woman","fish","bird","pen","apple","door","box","shoe","milk","egg","toy","sock","hand","foot","sky","rain","snow","leaf","grass","flower","star","moon","bee","ant","doggy","kitty","bag","cap","pencil","paper","note","desk","chair","lamp","coin","juice","bread","cake","orange","banana","grape","pear","melon","kiwi","peach","plum","rice","meat"];
+const mediumWords=["apple","banana","orange","grape","mango","pear","kiwi","melon","peach","plum","school","friend","family","city","road","river","mountain","forest","desert","ocean","flower","garden","music","guitar","piano","violin","drum","dance","art","painting","movie","theater","actor","director","design","fashion","food","pizza","burger","pasta","salad","chocolate","coffee","tea","water","juice","fruit","vegetable","bread","language","computer","keyboard","monitor","mouse","laptop","phone","game","puzzle","network","internet","planet","galaxy","rocket","energy","power","science","nature","camera","photo","video","song","album","painting","brush","color","note","story","poem","novel","bookstore","library","market","station"];
+const hardWords=["analysis","strategy","innovation","development","management","communication","technology","investment","optimization","entrepreneur","architecture","framework","sustainability","philosophy","psychology","literature","biochemistry","algorithm","logistics","regulation","mathematics","calculation","engineering","mechanics","chemistry","physics","computer","database","software","hardware","networking","environment","geography","geology","meteorology","astronomy","astrophysics","quantum","relativity","microbiology","nanotechnology","genetics","robotics","automation","cybersecurity","cryptography","entrepreneurship","management","investment","optimization","simulation","design","architecture","framework","strategy","evaluation","assessment","coordination","implementation","sustainability","communication"];
+
+let fallingWords=[], score=0, gameRunning=false, currentTargetWord=null, gameStartTime;
+let usedWords=new Set();
+
+// STAR BACKGROUND
+for(let i=0;i<100;i++){const s=document.createElement('div');s.className='star';const sz=Math.random()*3+1;s.style.width=sz+'px';s.style.height=sz+'px';s.style.left=Math.random()*gameArea.clientWidth+'px';s.style.top=Math.random()*gameArea.clientHeight+'px';s.style.opacity=.15+Math.random()*.2;gameArea.appendChild(s)}
+
+// HIGH SCORES
+function loadHighScores(){const scores=JSON.parse(localStorage.getItem('typeShooterScores')||'[]');scoreList.innerHTML='';scores.slice(0,5).forEach(s=>{const li=document.createElement('li');li.textContent=s;scoreList.appendChild(li)});}
+function saveHighScore(newScore){const scores=JSON.parse(localStorage.getItem('typeShooterScores')||'[]');scores.push(newScore);scores.sort((a,b)=>b-a);localStorage.setItem('typeShooterScores',JSON.stringify(scores));loadHighScores();}
+resetScoresBtn.addEventListener('click',()=>{localStorage.removeItem('typeShooterScores');loadHighScores();});
+loadHighScores();
+
+// GAME FUNCTIONS
+function getCurrentWordList(){const elapsed=(Date.now()-gameStartTime)/1000;const progress=Math.min(elapsed/300,1);if(progress<0.33)return easyWords;if(progress<0.66)return easyWords.concat(mediumWords);return easyWords.concat(mediumWords,hardWords);}
+function getRandomWord(){let word,attempts=0;do{word=getCurrentWordList()[Math.floor(Math.random()*getCurrentWordList().length)];attempts++;}while(usedWords.has(word)&&attempts<20);usedWords.add(word);if(usedWords.size>getCurrentWordList().length/2)usedWords.clear();return word;}
+function getCurrentSpeed(){const elapsed=(Date.now()-gameStartTime)/1000;return 0.5+((1.5-0.5)*Math.min(elapsed,300)/300);}
+function getCurrentSpawnInterval(){const elapsed=(Date.now()-gameStartTime)/1000;return 2000 - ((2000-900)*Math.min(elapsed,300)/300);}
+function createWord(){const t=getRandomWord(),e=document.createElement('div');e.className='word';e.textContent=t;e.style.left=Math.random()*(gameArea.clientWidth-150)+'px';e.style.top='0px';gameArea.appendChild(e);fallingWords.push({elem:e,text:t,y:0,filled:0});}
+function updateWords(){if(!gameRunning)return;const speed=getCurrentSpeed();for(let w of fallingWords){w.y+=speed;w.elem.style.top=w.y+'px';if(w.y>gameArea.clientHeight-30){endGame();return;}}updateArrow();requestAnimationFrame(updateWords);}
+function updateArrow(){if(fallingWords.length===0){arrow.style.display='none';return;}let c=fallingWords[0];for(let w of fallingWords)if(w.y>c.y)c=w;arrow.style.display='block';arrow.style.left=c.elem.offsetLeft + c.elem.offsetWidth/2 - 6 +'px';arrow.style.top=c.elem.offsetTop - 12 +'px';}
+
+// GAME CONTROL
+function endGame(){gameRunning=false;gameOverDisplay.style.display='block';restartBtn.style.display='block';startBtn.style.display='none';saveHighScore(score);}
+function resetGame(){fallingWords.forEach(w=>gameArea.removeChild(w.elem));fallingWords=[];score=0;scoreDisplay.textContent='Score: 0';currentTargetWord=null;gameOverDisplay.style.display='none';restartBtn.style.display='none';arrow.style.display='none';startBtn.style.display='block';}
+function spawnWords(){if(!gameRunning)return;createWord();setTimeout(spawnWords,getCurrentSpawnInterval());}
+function startGame(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  startBtn.style.display='none';
+  restartBtn.style.display='none';
+  gameOverDisplay.style.display='none';
+  gameRunning=true;
+  gameStartTime=Date.now();
+  spawnWords();
+  updateWords();
+}
+
+// KEY INPUT
+document.addEventListener('keydown',(e)=>{
+  if(!gameRunning) return;
+  const char=e.key.toLowerCase();
+  if(!currentTargetWord && fallingWords.length>0) currentTargetWord=fallingWords[0];
+  if(!currentTargetWord) return;
+  const nextChar=currentTargetWord.text[currentTargetWord.filled];
+  if(char===nextChar){
+    currentTargetWord.filled++;
+    const filled=currentTargetWord.text.slice(0,currentTargetWord.filled);
+    const remaining=currentTargetWord.text.slice(currentTargetWord.filled);
+    currentTargetWord.elem.innerHTML=`<span class="filled">${filled}</span>${remaining}`;
+    playCorrect();
+    if(currentTargetWord.filled===currentTargetWord.text.length){
+      score++;
+      scoreDisplay.textContent='Score: '+score;
+      gameArea.removeChild(currentTargetWord.elem);
+      fallingWords.shift();
+      currentTargetWord=null;
+    }
+  } else {
+    playWrong();
+  }
+});
+
+startBtn.addEventListener('click',startGame);
+restartBtn.addEventListener('click',()=>{resetGame();startGame();});
+window.onload=()=>{startBtn.style.display='block';restartBtn.style.display='none';};
+</script>
+
+</body>
+</html>
